@@ -18,13 +18,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public final class DeathPunish extends JavaPlugin {
 
-    public final static String VERSION = "1.3.8";
+    public final static String VERSION = "1.4.0";
+    public static Map<Boolean, String> ifNeedUpdate = new HashMap<>();;
     public static Economy econ = null;
     public static boolean enableEco = false;
     private FileConfiguration epitaphConfig;
@@ -57,7 +56,6 @@ public final class DeathPunish extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        // 插件禁用时的处理
         if (log != null) log.info("插件已禁用");
     }
 
@@ -145,26 +143,21 @@ public final class DeathPunish extends JavaPlugin {
                     String latestVersion = (String) jsonObject.get("tag_name");
                     String info = (String) jsonObject.get("body");
                     if (latestVersion != null) {
-                        latestVersion = latestVersion.replace("v", "");
-                        latestVersion = latestVersion.replace(".", "");
-                        int latestVersionInt = Integer.parseInt(latestVersion);
+                        int latestVersionInt = Integer.parseInt(latestVersion.replace("v", "").replace(".", ""));
                         int currentVersion = Integer.parseInt(VERSION.replace(".", ""));
                         if (latestVersionInt > currentVersion) {
                             log.info("检测到新版本: " + latestVersion + "，请前往 https://github.com/Findoutsider/DeathPunish 更新");
+
+                            ifNeedUpdate.put(true, latestVersion);
+
                             if (!info.equalsIgnoreCase("")) {
                                 log.info("新版本信息: " + info);
                             }
+                        } else if (latestVersionInt < currentVersion) {
+                            log.info("你正在使用开发版本！v" + VERSION);
                         } else {
                             log.info("当前版本已是最新: v" + VERSION);
-                        }
-                        for (Player player : Bukkit.getOnlinePlayers()) {
-                            if (player.isOp()) {
-                                player.sendMessage("§8[§bDeathPunish§8] §r检测到新版本: §a" + latestVersion
-                                        + "§r，请前往 https://github.com/Findoutsider/DeathPunish 更新");
-                                if (!info.equalsIgnoreCase("")) {
-                                    player.sendMessage("§8[§bDeathPunish§8] §r新版本信息: §a" + info);
-                                }
-                            }
+                            ifNeedUpdate.put(false, null);
                         }
                     }
                 } else {

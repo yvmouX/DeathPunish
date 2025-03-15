@@ -18,20 +18,20 @@ public class LoggerUtils {
     }
 
     public void warn(String s) {
-        console.sendMessage(prefix + "§e " + s);
+        console.sendMessage(prefix + "§e" + s);
     }
 
     public void serve_warn(String s, Boolean italic) {
         if (italic) s = "§o" + s;
-        console.sendMessage(prefix + "§e§l " + s);
+        console.sendMessage(prefix + "§e§l" + s);
     }
 
     public void err(String s) {
-        console.sendMessage(prefix + "§c "  + s);
+        console.sendMessage(prefix + "§c"  + s);
     }
 
     public void serve_err(String s, Boolean italic) {
         if (italic) s = "§o" + s;
-        console.sendMessage(prefix + "§c§l " + s);
+        console.sendMessage(prefix + "§c§l" + s);
     }
 }

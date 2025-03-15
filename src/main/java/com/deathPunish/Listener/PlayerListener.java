@@ -2,13 +2,10 @@ package com.deathPunish.Listener;
 
 import com.deathPunish.DeathPunish;
 import com.deathPunish.Epitaph;
-import com.destroystokyo.paper.event.player.PlayerPostRespawnEvent;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
-import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
@@ -21,11 +18,13 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.Nullable;
+
 import java.util.*;
 
 import static com.deathPunish.DeathPunish.*;
 import static com.deathPunish.DeathPunish.log;
 import static com.deathPunish.DeathPunish.worlds;
+import static com.deathPunish.DeathPunish.ifNeedUpdate;
 
 
 public class PlayerListener implements Listener {
@@ -34,8 +33,6 @@ public class PlayerListener implements Listener {
     private boolean isDeath = false;
     private final Plugin pl;
     private int food;
-    private final int min = config.getInt("punishments.Inventory.amount.min");
-    private final int max = config.getInt("punishments.Inventory.amount.max");
     private final List<Material> materials = new ArrayList<>();
     private AttributeInstance playerMaxHealth;
     private final Random rand = new Random();
@@ -63,8 +60,11 @@ public class PlayerListener implements Listener {
             player.sendMessage("[deathpunish] §a若二者版本不同请手动删除配置文件后重启服务器");
             player.sendMessage("[deathpunish] §a前往 https://github.com/Findoutsider/DeathPunish 获取更新");
             player.sendMessage("");
+            if (ifNeedUpdate.get(true) != null) {
+                player.sendMessage("§8[§bDeathPunish§8] §a检测到新版本: §6" + ifNeedUpdate.get(true) + "§a，请前往§b https://github.com/Findoutsider/DeathPunish §a更新");
             }
         }
+    }
 
 
     @EventHandler
@@ -87,7 +87,8 @@ public class PlayerListener implements Listener {
                 Material material2 = Material.valueOf(config.getString("customItems.ender_protect_item.material"));
                 for (ItemStack item : contents) {
 
-                    if (item == null || item.getType() == Material.AIR || !item.hasItemMeta() || !item.getItemMeta().hasDisplayName()) continue;
+                    if (item == null || item.getType() == Material.AIR || !item.hasItemMeta() || !item.getItemMeta().hasDisplayName())
+                        continue;
                     ItemMeta meta = item.getItemMeta();
                     if (meta != null && meta.hasDisplayName()) {
                         if (item.getType() == material1 && item.getItemMeta().getDisplayName().replace("§", "&").equalsIgnoreCase(config.getString("customItems.protect_item.name"))) {
@@ -100,7 +101,8 @@ public class PlayerListener implements Listener {
                     }
                 }
                 for (ItemStack item : contents1) {
-                    if (item == null || item.getType() == Material.AIR || !item.hasItemMeta() || !item.getItemMeta().hasDisplayName()) continue;
+                    if (item == null || item.getType() == Material.AIR || !item.hasItemMeta() || !item.getItemMeta().hasDisplayName())
+                        continue;
                     ItemMeta meta = item.getItemMeta();
                     if (meta != null && meta.hasDisplayName()) {
                         if (item.getType() == material2 && item.getItemMeta()
@@ -137,28 +139,38 @@ public class PlayerListener implements Listener {
                     Epitaph.createFloatingText(position.clone().add(0, 1, 0), epitaph);
                 }
 
-                // 清除玩家背包
+                // 背包
                 if (config.getBoolean("punishments.Inventory.enable")) {
-                    if (Objects.requireNonNull(config.getString("punishments.Inventory.mode")).equalsIgnoreCase("clear")) {
-                            player.getInventory().clear();
-                            ItemStack[] emptyArmorInv = new ItemStack[0];
-                            player.getInventory().setArmorContents(emptyArmorInv);
+                    if (Objects.requireNonNull(config.getString("punishments.Inventory.mode")).equalsIgnoreCase("all")) {
+                        for (ItemStack item : player.getInventory().getContents()) {
+                            if (item != null && !materials.contains(item.getType())) {
+                                player.getInventory().remove(item);
+                                if (!config.getBoolean("punishments.Inventory.clean")) {
+                                    player.getWorld().dropItemNaturally(player.getLocation(), item);
+                                }
+                            }
+                        }
                     }
-                    if (Objects.requireNonNull(config.getString("punishments.Inventory.mode")).equalsIgnoreCase("drop")) {
-                        int drop_index;
+
+                    if (Objects.requireNonNull(config.getString("punishments.Inventory.mode")).equalsIgnoreCase("part")) {
+                        int min = config.getInt("punishments.Inventory.amount.min");
+                        int max = config.getInt("punishments.Inventory.amount.max");
+                        int dropAmount = rand.nextInt(min, max+1);
+                        if (min == max) dropAmount = min;
+
+
                         List<ItemStack> inventory = new ArrayList<>(Arrays.asList(player.getInventory().getContents()));
-                        int dropAmount = rand.nextInt(max - min + 1) + min;
                         inventory.removeIf(Objects::isNull);
                         inventory.removeIf(item -> materials.contains(item.getType()));
+                        Collections.shuffle(inventory);
+
                         dropAmount = Math.min(dropAmount, inventory.size());
+
                         for (int i = 0; i < dropAmount; i++) {
-                            drop_index = rand.nextInt(0, 104);
-                            ItemStack itemToDrop = player.getInventory().getItem(drop_index);
-                            if (itemToDrop != null && !materials.contains(itemToDrop.getType())) {
-                                player.getWorld().dropItemNaturally(player.getLocation(), itemToDrop);
-                                player.getInventory().clear(drop_index);
-                            } else {
-                                i--;
+                            ItemStack item = inventory.get(i);
+                            player.getInventory().clear(player.getInventory().first(item));
+                            if (!config.getBoolean("punishments.Inventory.clean")) {
+                                player.getWorld().dropItemNaturally(player.getLocation(), item);
                             }
                         }
                     }
@@ -184,9 +196,9 @@ public class PlayerListener implements Listener {
                     }
                 }
             }
-        }else {
+        } else {
             method = "拥有bypass权限";
-            log.info("玩家 " +player.getName()+ " 因为§a " + method + " §b跳过死亡惩罚");
+            log.info("玩家 " + player.getName() + " 因为§a " + method + " §b跳过死亡惩罚");
             player.sendMessage(Objects.requireNonNull(config.getString("punishments.skipPunishMsg")));
         }
     }
@@ -197,7 +209,7 @@ public class PlayerListener implements Listener {
         var player = event.getPlayer();
         if (this.isDeath) {
             if (config.getBoolean("punishOnDeath.enable")) {
-                List<String> deathMsg =  Objects.requireNonNull(config.getStringList("punishments.deathMsg"));
+                List<String> deathMsg = Objects.requireNonNull(config.getStringList("punishments.deathMsg"));
                 for (String msg : deathMsg) {
                     player.sendMessage(msg);
                 }
@@ -241,17 +253,13 @@ public class PlayerListener implements Listener {
                         @Override
                         public void run() {
                             for (String effect : debuff) {
-                                log.info(effect);
                                 String[] parts = effect.split(" ");
                                 if (parts.length == 3) {
                                     PotionEffectType type = Registry.POTION_EFFECT_TYPE.get(NamespacedKey.minecraft(parts[0]));
                                     int duration = Integer.parseInt(parts[1]);
                                     int amplifier = Integer.parseInt(parts[2]);
                                     if (type != null) {
-                                        log.info(String.valueOf(duration));
-                                        log.info(String.valueOf(amplifier));
-                                        boolean res =  player.addPotionEffect(new PotionEffect(type, duration, amplifier));
-                                        log.info(String.valueOf(res));
+                                        boolean res = player.addPotionEffect(new PotionEffect(type, duration, amplifier));
                                     } else {
                                         log.info("无效的药水效果: " + parts[0]);
                                     }
@@ -273,14 +281,13 @@ public class PlayerListener implements Listener {
         if (ACTIONS.contains(event.getAction())) {
             ItemStack itemInMainHand = event.getPlayer().getInventory().getItemInMainHand();
             if ((itemInMainHand.getType() == Material.valueOf(config.getString("customItems.protect_item.material"))
-                    && itemInMainHand.getItemMeta().getDisplayName().replace("§", "&").equalsIgnoreCase(config.getString("customItems.protect_item.name")) )
+                    && itemInMainHand.getItemMeta().getDisplayName().replace("§", "&").equalsIgnoreCase(config.getString("customItems.protect_item.name")))
                     || (itemInMainHand.getType() == Material.valueOf(config.getString("customItems.ender_protect_item.material"))
                     && itemInMainHand.getItemMeta().getDisplayName().replace("§", "&").equalsIgnoreCase(config.getString("customItems.ender_protect_item.name")))) {
                 event.setCancelled(true);
             }
         }
     }
-
 
 
 }

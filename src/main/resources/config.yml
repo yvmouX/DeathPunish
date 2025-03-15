@@ -1,4 +1,4 @@
-version: "1.3.9"
+version: "1.4.0"
 
 # 是否启用死亡惩罚
 punishOnDeath:
@@ -32,10 +32,12 @@ punishments:
   # 死亡时玩家背包操作
   Inventory:
     enable: false
-    # clear/drop
-    mode: "clear"
+    # all/part
+    # all: 全部物品 part: 部分物品
+    # clean: true则清除，false会掉落
+    mode: "all"
+    clean: true
     amount:
-      # 掉落数量范围，一样则固定掉落
       min: 1
       max: 1
     # 不会掉落或被清除的物品
@@ -44,6 +46,7 @@ punishments:
       - "DIAMOND_CHESTPLATE"
       - "DIAMOND_LEGGINGS"
       - "DIAMOND_BOOTS"
+
 
   # 死亡是否清除玩家末影箱
   clearEnderchestOnDeath: false
