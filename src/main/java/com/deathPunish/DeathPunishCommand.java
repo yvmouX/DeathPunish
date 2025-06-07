@@ -4,14 +4,16 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.attribute.AttributeModifier.Operation;
 import org.bukkit.command.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.jetbrains.annotations.NotNull;
 import org.bukkit.plugin.Plugin;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +23,8 @@ import java.util.stream.Collectors;
 import static com.deathPunish.CustomItems.heal;
 import static com.deathPunish.CustomItems.recipe;
 import static com.deathPunish.DeathPunish.config;
+import static com.deathPunish.DeathPunish.log;
+import static com.deathPunish.Listener.PlayerListener.materials;
 
 public class DeathPunishCommand implements CommandExecutor, TabExecutor {
     private final Plugin pl;
@@ -31,7 +35,7 @@ public class DeathPunishCommand implements CommandExecutor, TabExecutor {
     }
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
+    public boolean onCommand(CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
         if (sender.hasPermission("deathpunish.command")) {
             if (label.equalsIgnoreCase("deathpunish") || label.equalsIgnoreCase("dp")) {
                 if ((args.length == 0) || (args[0].equalsIgnoreCase("help"))) {
@@ -77,23 +81,20 @@ public class DeathPunishCommand implements CommandExecutor, TabExecutor {
                         sender.sendMessage("§c设置的最大生命值必须为整数且不能小于1。");
                         return false;
                     }
-                    maxHealth = targetPlayer.getAttribute(Attribute.GENERIC_MAX_HEALTH);
-                    if (maxHealth != null) {
-                        maxHealth.setBaseValue(Integer.parseInt(args[2]));
-                    }
+                    
+                    // 使用新的方法设置血量上限
+                    double newMaxHealth = Integer.parseInt(args[2]);
+                    isHealth = args.length >= 4 && args[3].equalsIgnoreCase("true");
+                    setPlayerMaxHealth(targetPlayer, newMaxHealth, isHealth);
 
-                    if (args.length >= 4) {
-                        isHealth = args[3].equalsIgnoreCase("true");
-                    }
                     if (isHealth) {
-                        targetPlayer.setHealth(Integer.parseInt(args[2]));
                         sender.sendMessage("[DeathPunish] §a已设置玩家 " + targetPlayer.getName() + " 最大生命值为" + args[2] + "并为其恢复到最大生命");
                     } else {
                         sender.sendMessage("[DeathPunish] §a已设置玩家 " + targetPlayer.getName() + " 最大生命值为" + args[2]);
                     }
                     return true;
                 } else {
-                    sender.sendMessage("[DeathPunish] §c找不到玩家 " + targetPlayer.getName());
+                    sender.sendMessage("[DeathPunish] §c找不到玩家 " + args[1]);
                     return false;
                 }
             }
@@ -107,11 +108,14 @@ public class DeathPunishCommand implements CommandExecutor, TabExecutor {
                     Player targetPlayer = Bukkit.getPlayer(args[1]);
                     if (targetPlayer != null) {
                         try {
-                            maxHealth = targetPlayer.getAttribute(Attribute.GENERIC_MAX_HEALTH);
-                            if (maxHealth != null) {
-                                maxHealth.setBaseValue(maxHealth.getValue() + Integer.parseInt(args[2]));
-                            }
-                            sender.sendMessage("[DeathPunish] §a已为玩家 " + targetPlayer.getName() + " 增加血量上限，当前上限为" + maxHealth.getValue());
+                            // 获取当前有效最大生命值
+                            double currentHealth = getEffectiveMaxHealth(targetPlayer);
+                            double addAmount = Integer.parseInt(args[2]);
+                            
+                            // 使用新的方法设置血量上限
+                            setPlayerMaxHealth(targetPlayer, currentHealth + addAmount, false);
+                            
+                            sender.sendMessage("[DeathPunish] §a已为玩家 " + targetPlayer.getName() + " 增加血量上限，当前上限为" + getEffectiveMaxHealth(targetPlayer));
                             return true;
                         } catch (NumberFormatException e) {
                             sender.sendMessage("[DeathPunish] §c生命值必须为整数");
@@ -159,6 +163,15 @@ public class DeathPunishCommand implements CommandExecutor, TabExecutor {
                 } else {
                     pl.reloadConfig();
                     config = pl.getConfig();
+                    List<String> whitelist = config.getStringList("punishments.Inventory.whitelist");
+                    for (String wl : whitelist) {
+                        try {
+                            Material material = Material.valueOf(wl);
+                            materials.add(material);
+                        } catch (IllegalArgumentException e) {
+                            log.warn("§c无效的物品: " + wl);
+                        }
+                    }
                     sender.sendMessage("[DeathPunish] §a插件已重载");
                     return true;
                 }
@@ -186,9 +199,13 @@ public class DeathPunishCommand implements CommandExecutor, TabExecutor {
                     lore = config.getStringList("customItems.heal_item.lore");
                     meta = itemStack.getItemMeta();
                     heal = heal.replace("&", "§");
-                    meta.setDisplayName(heal);
+                    if (meta != null) {
+                        meta.setDisplayName(heal);
+                    }
                     lore = lore.stream().map(s -> s.replace("&", "§")).collect(Collectors.toList());
-                    meta.setLore(lore);
+                    if (meta != null) {
+                        meta.setLore(lore);
+                    }
                     itemStack.setItemMeta(meta);
                     player.getInventory().addItem(itemStack);
                 } else if (args[2].equalsIgnoreCase(protect)) {
@@ -197,8 +214,12 @@ public class DeathPunishCommand implements CommandExecutor, TabExecutor {
                     protect = protect.replace("&", "§");
                     meta = itemStack.getItemMeta();
                     lore = lore.stream().map(s -> s.replace("&", "§")).collect(Collectors.toList());
-                    meta.setDisplayName(protect);
-                    meta.setLore(lore);
+                    if (meta != null) {
+                        meta.setDisplayName(protect);
+                    }
+                    if (meta != null) {
+                        meta.setLore(lore);
+                    }
                     itemStack.setItemMeta(meta);
                     player.getInventory().addItem(itemStack);
                 } else if (args[2].equalsIgnoreCase(ender_protect)) {
@@ -206,9 +227,13 @@ public class DeathPunishCommand implements CommandExecutor, TabExecutor {
                     lore = config.getStringList("customItems.ender_protect_item.lore");
                     ender_protect = ender_protect.replace("&", "§");
                     meta = itemStack.getItemMeta();
-                    meta.setDisplayName(ender_protect);
+                    if (meta != null) {
+                        meta.setDisplayName(ender_protect);
+                    }
                     lore = lore.stream().map(s -> s.replace("&", "§")).collect(Collectors.toList());
-                    meta.setLore(lore);
+                    if (meta != null) {
+                        meta.setLore(lore);
+                    }
                     itemStack.setItemMeta(meta);
                     player.getInventory().addItem(itemStack);
                 }
@@ -251,6 +276,46 @@ public class DeathPunishCommand implements CommandExecutor, TabExecutor {
             }
         }
         return null;
+    }
+
+    /**
+     * 获取玩家有效的最大生命值
+     */
+    private double getEffectiveMaxHealth(Player player) {
+        AttributeInstance maxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+        if (maxHealth == null) return 20.0;
+        return maxHealth.getValue();
+    }
+    
+    /**
+     * 设置玩家的最大生命值
+     * @param player 目标玩家
+     * @param newMaxHealth 新的最大生命值
+     * @param setCurrentHealth 是否同时设置当前生命值
+     */
+    private void setPlayerMaxHealth(Player player, double newMaxHealth, boolean setCurrentHealth) {
+        AttributeInstance maxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+        if (maxHealth == null) return;
+        
+        // 确保最大生命值不小于1
+        newMaxHealth = Math.max(1.0, newMaxHealth);
+        
+        // 使用四舍五入保留2位小数，避免浮点数精度问题
+        newMaxHealth = Math.round(newMaxHealth * 100) / 100.0;
+        
+        // 清除所有现有的修饰符
+        maxHealth.getModifiers().forEach(maxHealth::removeModifier);
+        
+        // 直接设置基础生命值
+        maxHealth.setBaseValue(newMaxHealth);
+        
+        // 保存玩家的新血量上限到数据文件
+        DeathPunish.savePlayerMaxHealth(player, newMaxHealth);
+        
+        // 如果需要，设置当前生命值
+        if (setCurrentHealth) {
+            player.setHealth(Math.min(newMaxHealth, player.getMaxHealth()));
+        }
     }
 
 }

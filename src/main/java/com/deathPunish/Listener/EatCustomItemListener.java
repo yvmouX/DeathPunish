@@ -45,7 +45,7 @@ public class EatCustomItemListener implements Listener {
                 for (String effect : potionEffects) {
                     String[] parts = effect.split(" ");
 
-                    PotionEffectType type = Registry.POTION_EFFECT_TYPE.get(NamespacedKey.minecraft(parts[0]));
+                    PotionEffectType type = PotionEffectType.getByKey(NamespacedKey.minecraft(parts[0]));
                     int duration = Integer.parseInt(parts[1]);
                     int amplifier = Integer.parseInt(parts[2]);
                     if (type != null) {
