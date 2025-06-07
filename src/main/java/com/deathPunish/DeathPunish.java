@@ -1,5 +1,6 @@
 package com.deathPunish;
 
+import com.tcoded.folialib.FoliaLib;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.GameRule;
@@ -38,8 +39,14 @@ public final class DeathPunish extends JavaPlugin {
     public static com.deathPunish.Utils.LoggerUtils log;
     public static List<String> worlds;
 
+    private static FoliaLib foliaLib;
+
+    public static FoliaLib getFoliaLib() {return foliaLib;}
+
     @Override
     public void onEnable() {
+        foliaLib = new FoliaLib(this);
+
         log = new com.deathPunish.Utils.LoggerUtils();
         int pluginId = 24171;
         com.deathPunish.Utils.Metrics metrics = new com.deathPunish.Utils.Metrics(this, pluginId);
@@ -143,7 +150,7 @@ public final class DeathPunish extends JavaPlugin {
     }
 
     private void checkForUpdates() {
-        Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
+        Runnable runnable = () -> {
             try {
                 URL url = new URL("https://api.github.com/repos/Findoutsider/DeathPunish/releases/latest");
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -178,7 +185,12 @@ public final class DeathPunish extends JavaPlugin {
             } catch (IOException | org.json.simple.parser.ParseException e) {
                 log.err("获取最新版本时发生异常: " + e.getMessage() + Arrays.toString(e.getStackTrace()));
             }
-        });
+        };
+        if (DeathPunish.getFoliaLib().isFolia()) {
+            DeathPunish.getFoliaLib().getScheduler().runAsync(wrappedTask -> runnable.run());
+        } else {
+            Bukkit.getScheduler().runTaskAsynchronously(this, runnable);
+        }
     }
 
     private static JSONObject getJsonObject(HttpURLConnection connection) throws IOException, org.json.simple.parser.ParseException {

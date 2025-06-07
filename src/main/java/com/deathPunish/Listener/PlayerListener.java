@@ -331,12 +331,18 @@ public class PlayerListener implements Listener {
                     
                 // 减少最大生命值
                 if (config.getBoolean("punishments.reduceMaxHealthOnDeath")) {
-                    new BukkitRunnable() {
-                        @Override
-                        public void run() {
+                    if (DeathPunish.getFoliaLib().isFolia()) {
+                        DeathPunish.getFoliaLib().getScheduler().runLater(wrappedTask -> {
+                            applyHealthPunishment(player);
+                        }, 1L);
+                    } else {
+                        new BukkitRunnable() {
+                            @Override
+                            public void run() {
                                 applyHealthPunishment(player);
                             }
                         }.runTaskLater(pl, 1L); // 延迟1个tick执行，确保玩家已完全复活
+                    }
                     }
                 } else {
                     log.err("无法获取玩家 " + player.getName() + " 的血量属性，跳过血量惩罚");
@@ -344,12 +350,18 @@ public class PlayerListener implements Listener {
                 
                 // 处理饥饿度
                 if (config.getBoolean("punishments.foodLevel.save")) {
-                    new BukkitRunnable() {
-                        @Override
-                        public void run() {
+                    if (DeathPunish.getFoliaLib().isFolia()) {
+                        DeathPunish.getFoliaLib().getScheduler().runLater(wrappedTask -> {
                             player.setFoodLevel(food);
-                        }
-                    }.runTaskLater(pl, 1L);
+                        }, 1L);
+                    } else {
+                        new BukkitRunnable() {
+                            @Override
+                            public void run() {
+                                player.setFoodLevel(food);
+                            }
+                        }.runTaskLater(pl, 1L);
+                    }
                 } else {
                     new BukkitRunnable() {
                         @Override
@@ -362,24 +374,26 @@ public class PlayerListener implements Listener {
                 // 处理负面效果
                 if (config.getBoolean("punishments.debuff.enable")) {
                     List<String> debuff = config.getStringList("punishments.debuff.potions");
-                    new BukkitRunnable() {
-                        @Override
-                        public void run() {
-                            for (String effect : debuff) {
-                                String[] parts = effect.split(" ");
-                                if (parts.length == 3) {
-                                    PotionEffectType type = PotionEffectType.getByKey(NamespacedKey.minecraft(parts[0]));
-                                    int duration = Integer.parseInt(parts[1]);
-                                    int amplifier = Integer.parseInt(parts[2]);
-                                    if (type != null) {
-                                        boolean res = player.addPotionEffect(new PotionEffect(type, duration, amplifier));
-                                    } else {
-                                        log.info("无效的药水效果: " + parts[0]);
-                                    }
+                    Runnable runnable = () -> {
+                        for (String effect : debuff) {
+                            String[] parts = effect.split(" ");
+                            if (parts.length == 3) {
+                                PotionEffectType type = PotionEffectType.getByKey(NamespacedKey.minecraft(parts[0]));
+                                int duration = Integer.parseInt(parts[1]);
+                                int amplifier = Integer.parseInt(parts[2]);
+                                if (type != null) {
+                                    boolean res = player.addPotionEffect(new PotionEffect(type, duration, amplifier));
+                                } else {
+                                    log.info("无效的药水效果: " + parts[0]);
                                 }
                             }
                         }
-                    }.runTaskLater(pl, 1L);
+                    };
+                    if (DeathPunish.getFoliaLib().isFolia()) {
+                        DeathPunish.getFoliaLib().getScheduler().runLater(wrappedTask -> runnable.run(), 1L);
+                    } else {
+                        Bukkit.getScheduler().runTaskLater(pl, runnable, 1L);
+                    }
                 }
 
                 this.isDeath = false;
@@ -453,38 +467,40 @@ public class PlayerListener implements Listener {
             syncHealthDisplay(pl, player, savedMaxHealth);
             
             // 在下一个tick再次检查，确保没有其他插件修改了血量
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    // 再次获取当前血量状态
-                    double newBaseValue = maxHealth.getBaseValue();
-                    double newValue = maxHealth.getValue();
-                    
-                    // 如果值不匹配，再次尝试设置
-                    if (Math.abs(newBaseValue - savedMaxHealth) > 0.1 || Math.abs(newValue - savedMaxHealth) > 0.1) {
-                        log.warn("玩家 " + player.getName() + " 的血量值在延迟检查中不匹配！基础值: " + 
-                                newBaseValue + ", 实际值: " + newValue + ", 期望值: " + savedMaxHealth);
-                        
-                        // 再次清除所有修饰符
-                        for (AttributeModifier modifier : maxHealth.getModifiers()) {
-                            maxHealth.removeModifier(modifier);
-                        }
-                        
-                        // 再次设置基础值
-                        maxHealth.setBaseValue(savedMaxHealth);
-                        log.info("已再次强制设置玩家 " + player.getName() + " 的血量上限为: " + savedMaxHealth);
-                        
-                        // 再次同步血量显示
-                        syncHealthDisplay(pl, player, savedMaxHealth);
+            Runnable runnable = () -> {
+                // 再次获取当前血量状态
+                double newBaseValue = maxHealth.getBaseValue();
+                double newValue = maxHealth.getValue();
+
+                // 如果值不匹配，再次尝试设置
+                if (Math.abs(newBaseValue - savedMaxHealth) > 0.1 || Math.abs(newValue - savedMaxHealth) > 0.1) {
+                    log.warn("玩家 " + player.getName() + " 的血量值在延迟检查中不匹配！基础值: " +
+                            newBaseValue + ", 实际值: " + newValue + ", 期望值: " + savedMaxHealth);
+
+                    // 再次清除所有修饰符
+                    for (AttributeModifier modifier : maxHealth.getModifiers()) {
+                        maxHealth.removeModifier(modifier);
                     }
-                    
-                    // 确保当前生命值不超过最大值
-                    if (player.getHealth() > savedMaxHealth) {
-                        player.setHealth(savedMaxHealth);
-                        log.info("调整玩家 " + player.getName() + " 当前生命值为: " + savedMaxHealth);
-                    }
+
+                    // 再次设置基础值
+                    maxHealth.setBaseValue(savedMaxHealth);
+                    log.info("已再次强制设置玩家 " + player.getName() + " 的血量上限为: " + savedMaxHealth);
+
+                    // 再次同步血量显示
+                    syncHealthDisplay(pl, player, savedMaxHealth);
                 }
-            }.runTaskLater(pl, 10L); // 延迟10个tick检查，确保其他插件有机会运行
+
+                // 确保当前生命值不超过最大值
+                if (player.getHealth() > savedMaxHealth) {
+                    player.setHealth(savedMaxHealth);
+                    log.info("调整玩家 " + player.getName() + " 当前生命值为: " + savedMaxHealth);
+                }
+            };
+            if (DeathPunish.getFoliaLib().isFolia()) {
+                DeathPunish.getFoliaLib().getScheduler().runLater(runnable, 10L);
+            } else {
+                Bukkit.getScheduler().runTaskLater(pl, runnable, 10L); // 延迟10个tick检查，确保其他插件有机会运行
+            }
         } else {
             log.info("玩家 " + player.getName() + " 没有保存的血量上限数据，保持当前值");
         }
@@ -575,42 +591,44 @@ public class PlayerListener implements Listener {
         
         // 延迟检查，确保没有其他插件干扰我们的设置
         double finalNewMaxHealth = newMaxHealth;
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                // 再次获取当前血量状态
-                double finalBaseValue = maxHealth.getBaseValue();
-                double finalValue = maxHealth.getValue();
-                
-                // 如果值不匹配，记录警告
-                if (Math.abs(finalBaseValue - finalNewMaxHealth) > 0.1) {
-                    log.warn("警告：玩家 " + player.getName() + " 的血量基础值在延迟检查中不匹配！" +
-                            "应为: " + finalNewMaxHealth + ", 实际为: " + finalBaseValue);
-                    
-                    // 记录修饰符
-                    StringBuilder finalModifiers = new StringBuilder();
-                    for (AttributeModifier modifier : maxHealth.getModifiers()) {
-                        finalModifiers.append("\n  - ").append(modifier.getName())
-                                  .append(": ").append(modifier.getAmount())
-                                  .append(", 操作: ").append(modifier.getOperation())
-                                  .append(", UUID: ").append(modifier.getUniqueId());
-                    }
-                    if (finalModifiers.length() > 0) {
-                        log.info("延迟检查时，玩家 " + player.getName() + " 的血量修饰符:" + finalModifiers);
-                    }
-                    
-                    // 再次尝试设置
-                    for (AttributeModifier modifier : maxHealth.getModifiers()) {
-                        maxHealth.removeModifier(modifier);
-                    }
-                    maxHealth.setBaseValue(finalNewMaxHealth);
-                    log.info("已再次强制设置玩家 " + player.getName() + " 的血量上限为: " + finalNewMaxHealth);
-                    
-                    // 再次同步血量显示
-                    syncHealthDisplay(pl, player, finalNewMaxHealth);
+        Runnable runnable = () -> {
+            // 再次获取当前血量状态
+            double finalBaseValue = maxHealth.getBaseValue();
+            double finalValue = maxHealth.getValue();
+
+            // 如果值不匹配，记录警告
+            if (Math.abs(finalBaseValue - finalNewMaxHealth) > 0.1) {
+                log.warn("警告：玩家 " + player.getName() + " 的血量基础值在延迟检查中不匹配！" +
+                        "应为: " + finalNewMaxHealth + ", 实际为: " + finalBaseValue);
+
+                // 记录修饰符
+                StringBuilder finalModifiers = new StringBuilder();
+                for (AttributeModifier modifier : maxHealth.getModifiers()) {
+                    finalModifiers.append("\n  - ").append(modifier.getName())
+                            .append(": ").append(modifier.getAmount())
+                            .append(", 操作: ").append(modifier.getOperation())
+                            .append(", UUID: ").append(modifier.getUniqueId());
                 }
+                if (finalModifiers.length() > 0) {
+                    log.info("延迟检查时，玩家 " + player.getName() + " 的血量修饰符:" + finalModifiers);
+                }
+
+                // 再次尝试设置
+                for (AttributeModifier modifier : maxHealth.getModifiers()) {
+                    maxHealth.removeModifier(modifier);
+                }
+                maxHealth.setBaseValue(finalNewMaxHealth);
+                log.info("已再次强制设置玩家 " + player.getName() + " 的血量上限为: " + finalNewMaxHealth);
+
+                // 再次同步血量显示
+                syncHealthDisplay(pl, player, finalNewMaxHealth);
             }
-        }.runTaskLater(pl, 20L); // 延迟20个tick检查
+        };
+        if (DeathPunish.getFoliaLib().isFolia()) {
+            DeathPunish.getFoliaLib().getScheduler().runLater(runnable, 20L);
+        } else {
+            Bukkit.getScheduler().runTaskLater(pl, runnable, 20L);
+        }
     }
 
     @EventHandler
@@ -656,23 +674,38 @@ public class PlayerListener implements Listener {
         }
         
         // 通过先设置为1再设回正常值，强制刷新客户端界面
-        new BukkitRunnable() {
-            @Override
-            public void run() {
+        if (DeathPunish.getFoliaLib().isFolia()) {
+            DeathPunish.getFoliaLib().getScheduler().runLater(() -> {
                 // 先保存当前生命值
                 double currentHealth = player.getHealth();
                 // 设置一个临时的低值，强制客户端更新
                 player.setHealth(Math.min(1.0, currentHealth));
-                
+
                 // 再设回正常值
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        player.setHealth(currentHealth);
-                        log.info("已同步玩家 " + player.getName() + " 的血量显示，当前生命值: " + currentHealth);
-                    }
-                }.runTaskLater(plugin, 2L);
-            }
-        }.runTaskLater(plugin, 2L);
+                DeathPunish.getFoliaLib().getScheduler().runLater(() -> {
+                    player.setHealth(currentHealth);
+                    log.info("已同步玩家 " + player.getName() + " 的血量显示，当前生命值: " + currentHealth);
+                }, 2L);
+            }, 2L);
+        } else {
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    // 先保存当前生命值
+                    double currentHealth = player.getHealth();
+                    // 设置一个临时的低值，强制客户端更新
+                    player.setHealth(Math.min(1.0, currentHealth));
+
+                    // 再设回正常值
+                    new BukkitRunnable() {
+                        @Override
+                        public void run() {
+                            player.setHealth(currentHealth);
+                            log.info("已同步玩家 " + player.getName() + " 的血量显示，当前生命值: " + currentHealth);
+                        }
+                    }.runTaskLater(plugin, 2L);
+                }
+            }.runTaskLater(plugin, 2L);
+        }
     }
 }
