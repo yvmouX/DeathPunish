@@ -33,7 +33,7 @@ public final class DeathPunish extends JavaPlugin {
     public static FileConfiguration config;
     public static com.deathPunish.Utils.LoggerUtils log;
 
-    public final static String VERSION = "1.4.0";
+    public final static String VERSION = "1.4.2";
     public static Map<Boolean, String> ifNeedUpdate = new HashMap<>();;
     public static Economy econ = null;
     public static boolean enableEco = false;
