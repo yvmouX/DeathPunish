@@ -6,7 +6,7 @@
 
     <groupId>com</groupId>
     <artifactId>DeathPunish</artifactId>
-    <version>1.4.0</version>
+    <version>1.4.2</version>
     <packaging>jar</packaging>
 
     <name>DeathPunish</name>
