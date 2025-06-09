@@ -1,14 +1,12 @@
-package com.deathPunish;
+package com.deathPunish.Utils;
 
 import org.bukkit.Location;
 import org.bukkit.entity.ArmorStand;
 
-import java.util.Objects;
-
-public class Epitaph {
+public class EpitaphUtils {
 
     public static void createFloatingText(Location location, String text) {
-        ArmorStand armorStand = Objects.requireNonNull(location.getWorld()).spawn(location, ArmorStand.class);
+        ArmorStand armorStand = location.getWorld().spawn(location, ArmorStand.class);
 
         armorStand.setVisible(false);
         armorStand.setCustomName(text);
