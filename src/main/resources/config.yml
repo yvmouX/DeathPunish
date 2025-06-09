@@ -1,4 +1,4 @@
-version: "1.4.1"
+version: "1.4.2"
 
 # 是否启用死亡惩罚
 punishOnDeath:
@@ -10,6 +10,8 @@ punishOnDeath:
 # 若世界死亡不掉落未开启，则自动开启
 # 死亡不掉落不开启会导致部分功能无效
 autoSetRule: true
+# 立即重生DO_IMMEDIATE_RESPAWN
+doImmediateRespawn: false # 如果是在folia服务端上运行本插件，该项默认为true，更改此项无效。
 
 punishments:
   # 死亡时减少玩家生命上限

@@ -1,4 +1,4 @@
-package com.deathPunish;
+package com.deathPunish.Utils.manager;
 
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -6,6 +6,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Map;
@@ -25,17 +26,13 @@ public class CustomItems {
         String shape1 = config.getString("customItems.heal_item.shape1", "yxy");
         String shape2 = config.getString("customItems.heal_item.shape2", "xbx");
         String shape3 = config.getString("customItems.heal_item.shape3", "yxy");
-        Map<String, Object> ingredients = Objects.requireNonNull(config.getConfigurationSection("customItems.heal_item.ingredients")).getValues(false);
+        @NotNull Map<String, Object> ingredients = Objects.requireNonNull(config.getConfigurationSection("customItems.heal_item.ingredients")).getValues(false);
 
         // 创建物品
         ItemStack item = new ItemStack(Objects.requireNonNull(Material.matchMaterial(materialItem)));
         ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.setDisplayName(displayName);
-        }
-        if (meta != null) {
-            meta.setLore(lore);
-        }
+        meta.setDisplayName(displayName);
+        meta.setLore(lore);
         item.setItemMeta(meta);
 
         // 创建配方
