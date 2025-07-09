@@ -87,9 +87,9 @@ public class PlayerDeathListener implements Listener {
                         player.setHealth(newMaxHealth); // 重置当前生命值为新的最大值
                     }
                     if (config.getBoolean("punishments.foodLevel.save")) {
-                        SchedulerUtils.runTaskLater(pl,() -> player.setFoodLevel(food), 1L);
+                        SchedulerUtils.runTaskLater(pl,() -> player.setFoodLevel(food), 1L, null, null);
                     } else {
-                        SchedulerUtils.runTaskLater(pl,() -> player.setFoodLevel(config.getInt("punishments.foodLevel.value")), 1L);
+                        SchedulerUtils.runTaskLater(pl,() -> player.setFoodLevel(config.getInt("punishments.foodLevel.value")), 1L, null, null);
                     }
                     if (config.getBoolean("punishments.debuff.enable")) {
                         List<String> debuff = config.getStringList("punishments.debuff.potions");
@@ -110,14 +110,14 @@ public class PlayerDeathListener implements Listener {
                                     }
                                 }
                             }
-                        });
+                        }, null, null);
                     }
                     this.isDeath = false;
                 }
             }
         };
         if (SchedulerUtils.isFolia()) {
-            SchedulerUtils.runTaskLater(pl, r, 5L);
+            SchedulerUtils.runTaskLater(pl, r, 5L, null, null);
         } else r.run();
     }
 

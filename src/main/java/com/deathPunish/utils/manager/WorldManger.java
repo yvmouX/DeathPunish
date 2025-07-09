@@ -42,6 +42,6 @@ public class WorldManger {
                     log.warn("已自动设置世界 " + world + " 的游戏规则为" + y);
                 }
             }
-        });
+        }, null, null);
     }
 }
