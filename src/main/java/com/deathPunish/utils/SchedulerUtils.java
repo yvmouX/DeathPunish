@@ -16,35 +16,35 @@ public class SchedulerUtils {
         return DeathPunish.getFoliaLib().isFolia();
     }
 
-    public static AsyncTask runTask(Plugin plugin, Runnable runnable, Entity entity, Location location) {
+    public static UniversalTask runTask(Plugin plugin, Runnable runnable, Entity entity, Location location) {
         if (DeathPunish.getFoliaLib().isFolia()) {
             if (!entity.isEmpty()) {
                 CompletableFuture<EntityTaskResult> task = DeathPunish.getFoliaLib().getScheduler().runAtEntity(entity, wrappedTask -> runnable.run());
-                return new AsyncTask(null, null, task, -1);
+                return new UniversalTask(null, null, task, -1);
             } else if (location != null) {
                 CompletableFuture<Void> task = DeathPunish.getFoliaLib().getScheduler().runAtLocation(location, wrappedTask -> runnable.run());
-                return new AsyncTask(null, null, task, -1);
+                return new UniversalTask(null, null, task, -1);
             } else {
                 CompletableFuture<Void> task = DeathPunish.getFoliaLib().getScheduler().runNextTick(wrappedTask -> runnable.run());
-                return new AsyncTask(null, null, task, -1);
+                return new UniversalTask(null, null, task, -1);
             }
         } else {
             BukkitTask task = Bukkit.getScheduler().runTask(plugin, runnable);
-            return new AsyncTask(task, null, null, -1);
+            return new UniversalTask(task, null, null, -1);
         }
     }
 
-    public static AsyncTask runTaskAsynchronously(Plugin plugin, Runnable runnable) {
+    public static UniversalTask runTaskAsynchronously(Plugin plugin, Runnable runnable) {
         if (DeathPunish.getFoliaLib().isFolia()) {
             CompletableFuture<Void> task = DeathPunish.getFoliaLib().getScheduler().runAsync(wrappedTask -> runnable.run());
-            return new AsyncTask(null, null, task, -1);
+            return new UniversalTask(null, null, task, -1);
         } else {
             BukkitTask task = Bukkit.getScheduler().runTaskAsynchronously(plugin, runnable);
-            return new AsyncTask(task, null, null, -1);
+            return new UniversalTask(task, null, null, -1);
         }
     }
 
-    public static AsyncTask runTaskLater(final Plugin plugin, final Runnable runnable, long delay, Entity entity, Location location) {
+    public static UniversalTask runTaskLater(final Plugin plugin, final Runnable runnable, long delay, Entity entity, Location location) {
         if (DeathPunish.getFoliaLib().isFolia()) {
             WrappedTask task;
             if (!entity.isEmpty()) {
@@ -54,34 +54,34 @@ public class SchedulerUtils {
             } else {
                 task = DeathPunish.getFoliaLib().getScheduler().runLater(runnable, delay);
             }
-            return new AsyncTask(null, task, null, -1);
+            return new UniversalTask(null, task, null, -1);
         } else {
             BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, runnable, delay);
-            return new AsyncTask(task, null, null, -1);
+            return new UniversalTask(task, null, null, -1);
         }
     }
 
-    public static AsyncTask runTaskTimerAsynchronously(final Plugin plugin, final Runnable runnable, long delay, long period) {
+    public static UniversalTask runTaskTimerAsynchronously(final Plugin plugin, final Runnable runnable, long delay, long period) {
         if (DeathPunish.getFoliaLib().isFolia()) {
             WrappedTask task = DeathPunish.getFoliaLib().getScheduler().runTimerAsync(runnable, delay, period);
-            return new AsyncTask(null, task, null, -1);
+            return new UniversalTask(null, task, null, -1);
         } else {
             BukkitTask task = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, runnable, delay, period);
-            return new AsyncTask(task, null, null, -1);
+            return new UniversalTask(task, null, null, -1);
         }
     }
 
-    public static AsyncTask runTaskLaterAsynchronously(final Plugin plugin, final Runnable runnable, long delay) {
+    public static UniversalTask runTaskLaterAsynchronously(final Plugin plugin, final Runnable runnable, long delay) {
         if (DeathPunish.getFoliaLib().isFolia()) {
             WrappedTask task = DeathPunish.getFoliaLib().getScheduler().runLaterAsync(runnable, delay);
-            return new AsyncTask(null, task, null, -1);
+            return new UniversalTask(null, task, null, -1);
         } else {
             BukkitTask task = Bukkit.getScheduler().runTaskAsynchronously(plugin, runnable);
-            return new AsyncTask(task, null, null, -1);
+            return new UniversalTask(task, null, null, -1);
         }
     }
 
-    public static AsyncTask scheduleSyncDelayedTask(Plugin plugin, Runnable runnable, long delay, Entity entity, Location location) {
+    public static UniversalTask scheduleSyncDelayedTask(Plugin plugin, Runnable runnable, long delay, Entity entity, Location location) {
         if (DeathPunish.getFoliaLib().isFolia()) {
             WrappedTask task;
             if (!entity.isEmpty()) {
@@ -91,14 +91,14 @@ public class SchedulerUtils {
             } else {
                 task = DeathPunish.getFoliaLib().getScheduler().runLater(runnable, delay);
             }
-            return new AsyncTask(null, task, null, -1);
+            return new UniversalTask(null, task, null, -1);
         } else {
             int taskId = Bukkit.getScheduler().scheduleSyncDelayedTask(plugin, runnable, delay);
-            return new AsyncTask(null, null, null, taskId);
+            return new UniversalTask(null, null, null, taskId);
         }
     }
 
-    public static AsyncTask scheduleSyncRepeatingTask(Plugin plugin, Runnable runnable, long delay, long period, Entity entity, Location location) {
+    public static UniversalTask scheduleSyncRepeatingTask(Plugin plugin, Runnable runnable, long delay, long period, Entity entity, Location location) {
         if (DeathPunish.getFoliaLib().isFolia()) {
             WrappedTask task;
             if (!entity.isEmpty()) {
@@ -108,10 +108,10 @@ public class SchedulerUtils {
             } else {
                 task = DeathPunish.getFoliaLib().getScheduler().runTimer(runnable, delay, period);
             }
-            return new AsyncTask(null, task, null, -1);
+            return new UniversalTask(null, task, null, -1);
         } else {
             int taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, runnable, delay, period);
-            return new AsyncTask(null, null, null, taskId);
+            return new UniversalTask(null, null, null, taskId);
         }
     }
 
@@ -120,7 +120,7 @@ public class SchedulerUtils {
      *
      * @param taskId 用于存储传统任务ID
      */
-    public record AsyncTask(BukkitTask bukkitTask, WrappedTask foliaTask, CompletableFuture<?> future, int taskId) {
+    public record UniversalTask(BukkitTask bukkitTask, WrappedTask foliaTask, CompletableFuture<?> future, int taskId) {
 
         /**
          * 取消任务
